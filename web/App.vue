@@ -1,7 +1,8 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import ProductCard from "./ProductCard.vue";
-import { categories, withProductPhoto } from "./catalog.js";
+import { categories, photoUrl, withProductPhoto } from "./catalog.js";
+import { isPages, store } from "./store.js";
 
 const formatNumber = new Intl.NumberFormat("ru-RU");
 const formatDate = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" });
@@ -34,26 +35,11 @@ const cartTotal = computed(() => cartItems.value.reduce(
 const canCheckout = computed(() => !submitting.value && cartCount.value > 0 &&
   cartItems.value.every(({ product, quantity }) => quantity <= product.stock));
 
-async function request(path, options) {
-  let response;
-  let body;
-  try {
-    response = await fetch(path, options);
-    body = await response.json();
-  } catch {
-    throw new Error("Сервер недоступен. Попробуйте ещё раз.");
-  }
-  if (!response.ok) {
-    throw new Error(body.error || "Не удалось выполнить запрос.");
-  }
-  return body;
-}
-
 async function refreshProducts() {
   loadingProducts.value = true;
   catalogError.value = false;
   try {
-    const catalog = await request("/api/products");
+    const catalog = await store.catalog();
     const updated = new Map(catalog.map((product) => [product.id, withProductPhoto(product)]));
     for (const id of cart.keys()) {
       if (!updated.has(id)) {
@@ -98,15 +84,10 @@ async function checkout() {
   if (!canCheckout.value) {
     return;
   }
-  const body = [...cart].map(([id, quantity]) => `${id}:${quantity}`).join(" ");
   submitting.value = true;
   feedback.value = null;
   try {
-    const receipt = await request("/api/sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-furniture-cart" },
-      body,
-    });
+    const receipt = await store.sell(cart);
     cart.clear();
     feedback.value = { message: `Продажа №${receipt.id} оформлена на ${money(receipt.total)}.` };
   } catch (error) {
@@ -123,7 +104,7 @@ async function openHistory() {
   sales.value = [];
   historyDialog.value.showModal();
   try {
-    const history = await request("/api/sales");
+    const history = await store.history();
     if (currentRequest === historyRequest) {
       sales.value = history;
       historyStatus.value = history.length ? "" : "Продаж пока нет.";
@@ -169,7 +150,7 @@ onMounted(refreshProducts);
         <a class="primary-button" href="#catalog">Смотреть каталог</a>
       </div>
       <div class="hero-visual">
-        <img src="/images/hero.webp" alt="Оливковый диван и деревянный столик в солнечной гостиной" fetchpriority="high">
+        <img :src="photoUrl('hero')" alt="Оливковый диван и деревянный столик в солнечной гостиной" fetchpriority="high">
         <a class="featured-product" href="#catalog" @click="activeCategory = 'sofas'">Новинка - Диван «Уют»</a>
       </div>
     </section>
@@ -269,6 +250,7 @@ onMounted(refreshProducts);
         <h2 id="history-title">История продаж</h2>
         <button class="close-button" type="button" aria-label="Закрыть историю продаж" @click="historyDialog.close()">×</button>
       </div>
+      <p v-if="isPages" class="empty">Демонстрационные продажи хранятся в этом браузере.</p>
       <p v-if="historyStatus" class="empty" role="status">{{ historyStatus }}</p>
       <div class="sales">
         <article v-for="sale in sales" :key="sale.id" class="sale-row">

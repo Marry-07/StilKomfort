@@ -16,9 +16,14 @@ const photosByCategory = {
 };
 
 const metadata = new Map();
+
+export function photoUrl(filename) {
+  return `${import.meta.env.BASE_URL}images/${filename}.webp`;
+}
+
 for (const [category, photos] of Object.entries(photosByCategory)) {
   for (const [id, filename] of Object.entries(photos)) {
-    metadata.set(Number(id), { category, photo: `/images/${filename}.webp` });
+    metadata.set(Number(id), { category, photo: photoUrl(filename) });
   }
 }
 

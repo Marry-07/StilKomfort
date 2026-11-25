@@ -3,3 +3,4 @@ __pycache__/
 /furniture.db*
 /node_modules/
 /web/dist/
+/web/dist-pages/
