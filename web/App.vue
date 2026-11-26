@@ -89,7 +89,7 @@ async function checkout() {
   try {
     const receipt = await store.sell(cart);
     cart.clear();
-    feedback.value = { message: `Продажа №${receipt.id} оформлена на ${money(receipt.total)}.` };
+    feedback.value = { message: `Покупка №${receipt.id} оформлена на сумму ${money(receipt.total)}.` };
   } catch (error) {
     feedback.value = { message: error.message, error: true };
   } finally {
@@ -238,7 +238,7 @@ onMounted(refreshProducts);
       <div v-if="cartCount" class="cart-summary">
         <div class="total-row"><span>Итого</span><strong>{{ money(cartTotal) }}</strong></div>
         <button id="checkout" class="primary-button" type="button" :disabled="!canCheckout" @click="checkout">
-          {{ submitting ? "Оформляем…" : "Оформить продажу" }}
+          {{ submitting ? "Оформляем…" : "Оформить покупку" }}
         </button>
       </div>
     </div>
